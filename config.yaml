@@ -1,0 +1,54 @@
+bridge:
+  # auto: use 127.0.0.1 when mirrored networking works, otherwise the WSL gateway IP
+  host: auto
+  port: 8765
+  timeout_s: 40
+
+models:
+  base_url: https://api.deepseek.com
+  api_key_env: DEEPSEEK_API_KEY
+  planner_images: false
+  executor:
+    model: deepseek-flash
+    thinking: disabled
+  planner:
+    model: deepseek-flash
+    thinking: enabled
+    reasoning_effort: high
+  compiler:
+    model: deepseek-flash
+    thinking: enabled
+    reasoning_effort: high
+
+limits:
+  max_steps: 60
+  max_seconds: 600
+  max_model_calls: 80
+  max_tokens: 400000
+
+safety:
+  allowed_apps:
+    - obs64.exe
+    - notepad.exe
+    - explorer.exe
+    - chrome.exe
+    - msedge.exe
+  require_confirmation:
+    - delete
+    - send
+    - publish
+    - pay
+    - system_settings
+
+recording:
+  output_dir_windows: 'D:\Video\recordly'
+  test_subdir: pilot-tests
+  tracks:
+    system: 1
+    agent_voice: 2
+    microphone: 3
+
+voice:
+  provider: elevenlabs
+  model: eleven_flash_v2_5
+  output_device: 'CABLE Input'
