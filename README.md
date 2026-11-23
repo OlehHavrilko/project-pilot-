@@ -26,6 +26,7 @@ python3 -m venv .venv
 .venv/bin/python scripts/verify_stage0.py   # проверка этапа 0
 .venv/bin/python scripts/verify_voice.py    # локальный голос: синтез + WAV
 .venv/bin/python scripts/verify_stage1.py   # запись 30 с через OBS + проверка дорожек
+.venv/bin/python scripts/verify_models.py   # DeepSeek: executor + planner
 ```
 
 GPU-голос на Windows (AMD ROCm, Kokoro-ru, ~8x realtime): см. `docs/SETUP.md`, раздел
@@ -43,6 +44,7 @@ voice/             локальный TTS: Piper (CPU) / Kokoro-ru (GPU), оче
 scripts/           deploy_bridge.ps1, bridge.sh, verify_stageN.py
 tests/             unit (без внешних систем) и integration
 config.yaml        роли моделей, лимиты, безопасность, запись
+models/            адаптер DeepSeek (роли, thinking, JSON-схемы, бюджет)
 runs/              журналы и скриншоты проверок (в git не попадает)
 ```
 

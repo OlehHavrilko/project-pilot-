@@ -42,6 +42,9 @@ STAGE 0: PASS
 - Верификация `scripts/verify_stage0.py` (Notepad, текст, скриншот, стоп-клавиша).
 - Локальный голос: `voice/` (Piper + очередь + кеш), `scripts/verify_voice.py`; мост держит
   аудиопоток открытым и умеет dry-run (`--audio-dry-run`, `PILOT_AUDIO_DRY_RUN`).
+- Запись: `recording/obs_client.py` (obs-websocket 5.7.6), `scripts/verify_stage1.py`.
+- DeepSeek: `models/adapter.py` (роли executor/planner/compiler, thinking, JSON-схема
+  с одним повтором, бюджет, логирование), `scripts/verify_models.py`.
 - В WSL установлены `python3-venv`, `python3-pip`, `ffmpeg`/`ffprobe` (6.1.1).
 
 ## Окружение (проверено)
@@ -55,7 +58,7 @@ STAGE 0: PASS
 | Адрес моста | `172.23.112.1:8765` (IP vEthernet WSL, NAT-режим) |
 | OBS | 33.0.0, конфиги и бэкап на месте, obs-websocket выключен |
 | VB-Cable | не установлен |
-| Ключи | `DEEPSEEK_API_KEY`, `OBS_WS_PASSWORD` не заданы; голос локальный (Piper), ключ не нужен |
+| Ключи | `OBS_WS_PASSWORD` и `DEEPSEEK_API_KEY` заданы (в `.env`, не в git) |
 
 ## Известные проблемы и решения
 
@@ -92,6 +95,13 @@ STAGE 0: PASS
   а сами тестовые `.mkv` лежат в `D:\Video`. Папка `D:\Video\recordly` занята приложением Recordly.
   На этапе 1 привести путь к одному значению (настройки/obs-websocket) и писать тесты в `pilot-tests`.
 - Тестовые Блокноты, открытые проверкой, закрываются скриптом; чужие файлы не трогались.
+
+## Модели: проверено
+
+- `GET /models`: `deepseek-flash`, `deepseek-v4-pro`.
+- Исполнитель (thinking off): 0,61 с, JSON `{"answer": 391}`.
+- Планировщик (thinking on, `reasoning_effort: high`): 1,03 с, reasoning 297 символов,
+  JSON `{"steps": [...]}`.
 
 ## Требуется от пользователя (этап 1+)
 
