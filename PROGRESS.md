@@ -40,6 +40,8 @@ STAGE 0: PASS
   venv на Windows, pip install, запуск через `wscript.exe` (скрыто, вне процесса WSL),
   PID-файл, health-wait, `stop`/`status`/`logs`.
 - Верификация `scripts/verify_stage0.py` (Notepad, текст, скриншот, стоп-клавиша).
+- Локальный голос: `voice/` (Piper + очередь + кеш), `scripts/verify_voice.py`; мост держит
+  аудиопоток открытым и умеет dry-run (`--audio-dry-run`, `PILOT_AUDIO_DRY_RUN`).
 - В WSL установлены `python3-venv`, `python3-pip`, `ffmpeg`/`ffprobe` (6.1.1).
 
 ## Окружение (проверено)
@@ -53,9 +55,21 @@ STAGE 0: PASS
 | Адрес моста | `172.23.112.1:8765` (IP vEthernet WSL, NAT-режим) |
 | OBS | 33.0.0, конфиги и бэкап на месте, obs-websocket выключен |
 | VB-Cable | не установлен |
-| Ключи | `DEEPSEEK_API_KEY`, `ELEVENLABS_API_KEY`, `OBS_WS_PASSWORD` не заданы |
+| Ключи | `DEEPSEEK_API_KEY`, `OBS_WS_PASSWORD` не заданы; голос локальный (Piper), ключ не нужен |
 
 ## Известные проблемы и решения
+
+- **Голос: ElevenLabs заменён на локальный Piper** (23.11.2026). Бесплатно, офлайн, без ключей и
+  лимитов. Реализовано: `voice/piper_backend.py`, `voice/speaker.py` (очередь + кеш), мост держит
+  аудиопоток открытым; проверено `scripts/verify_voice.py`: 6,6 с речи синтезируются за 0,59 с
+  (RTF 0,09), 22,05 кГц моно, 3 чанка. Поток в мост проверен в dry-run (мост без VB-Cable):
+  все байты дошли. Осталось проиграть в реальный VB-Cable после его установки.
+- **GPU-голос проверен на RX 9060 XT (16 ГБ, gfx1200).** ROCm PyTorch 2.15.0+rocm10.2.0
+  на Windows Python 3.12: `torch.cuda.is_available() = True`. Kokoro-ru (82M, голос sveta)
+  на GPU: тёплый синтез 8,5 с речи за ~1,0 с, **RTF ≈ 0,12**, 24 кГц; первый запуск ~32 с
+  (компиляция MIOpen, закрывается warmup). Обход бага MIOpen: нативная замена
+  `instance_norm` (RDNA4). Ассеты и venv — в `%LOCALAPPDATA%\pilot\kokoro` и
+  `%LOCALAPPDATA%\pilot-voice`.
 
 - **Целевая платформа — Windows, WSL только для разработки** (23.11.2026, `PROJECT_PILOT.md` п. 2.8,
   `AGENTS.md` п. 2.0, добавлен этап 11). Код мозга должен оставаться кроссплатформенным.
@@ -83,14 +97,11 @@ STAGE 0: PASS
 
 1. Решить, включать ли постоянное монтирование `/mnt/c` и `/mnt/d`.
 2. В удобный момент включить mirrored networking и перезапустить WSL.
-3. Установить VB-Cable и выбрать его устройством вывода для голоса агента.
-4. Включить obs-websocket в OBS и задать пароль; добавить `OBS_WS_PASSWORD` в WSL.
-5. Добавить `DEEPSEEK_API_KEY` и `ELEVENLABS_API_KEY` (+`ELEVENLABS_VOICE_ID`) в окружение WSL.
-6. Подтвердить единый путь записей: вчера OBS писал в `D:\Video\recordly`, сейчас в `basic.ini`
-   `RecFilePath=D:/Video`, а папка `recordly` занята приложением Recordly.
+3. Сменить пароль obs-websocket в OBS (старый засветился в скриншоте) и обновить `.env`.
+4. Добавить `DEEPSEEK_API_KEY` в окружение WSL. Ключ для голоса не нужен.
+5. Подтвердить единый путь записей OBS (`D:\Video` сейчас; `recordly\pilot-tests` — по ТЗ).
 
 ## Следующий шаг
 
-Этап 1 «Запись и голос»: obs-websocket (старт/стоп/сцены), ElevenLabs streaming в WSL,
-PCM-чанки в мост → VB-Cable, отдельные дорожки, автоматическая проверка MKV через ffprobe
-и `silencedetect`. Начать с проверки доступности OBS websocket и установки VB-Cable.
+Этап 2 «Восприятие»: единое наблюдение UIA + CDP, текстовый формат с номерами элементов,
+подписка на события Windows. Для OBS, Discord и Проводника — понятный список элементов.

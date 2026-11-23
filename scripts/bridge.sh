@@ -51,6 +51,7 @@ case "$ACTION" in
             -ListenHost "${PILOT_BRIDGE_LISTEN_HOST:-$WINHOST}" \
             -Port "${PILOT_BRIDGE_PORT:-8765}" \
             -AudioDevice "${PILOT_AUDIO_DEVICE:-}" \
+            ${PILOT_AUDIO_DRY_RUN:+-AudioDryRun} \
             "$@"
         ;;
     *)

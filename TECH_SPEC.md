@@ -24,7 +24,7 @@
 | OBS | 33.0.0 установлен, профиль «Безымянный», конфиги и бэкап от 22.11 на месте | ✅ |
 | obs-websocket | OBS не запущен, порт 4455 закрыт, пароль не задан | ❌ этап 1 |
 | VB-Cable | не установлен (в устройствах только Realtek/AMD/Steam) | ❌ этап 1 |
-| Ключи API | `DEEPSEEK_API_KEY`, `ELEVENLABS_API_KEY` и др. в WSL не заданы | ❌ этапы 1, 3+ |
+| Ключи API | `DEEPSEEK_API_KEY`, `OBS_WS_PASSWORD` не заданы; голос локальный, ключ не нужен | ❌ этапы 1, 3+ |
 | Сеть | mirrored networking **выключен** (`.wslconfig` без `networkingMode`) | ⚠️ работает fallback |
 | Связь WSL→Windows | из WSL доступен `172.23.112.1` (vEthernet WSL); проверено HTTP 200 | ✅ |
 | Записи OBS | логи вчерашней записи: `D:\Video\recordly`; сейчас `basic.ini` → `RecFilePath=D:/Video`; mkv лежат в `D:\Video` | ⚠️ свести к одному пути на этапе 1 |
@@ -323,10 +323,18 @@ pilot/
 
 ## 11. Уточнения по следующим этапам
 
-- **1. Запись и голос.** OBS через `obsws-python`; дорожки: 1 — система, 2 — голос агента (VB-Cable),
-  3 — микрофон. ElevenLabs streaming (`eleven_flash_v2_5`), очередь реплик, кеш частых фраз по хешу
-  текста+голоса. `/play` в мосту принимает PCM16 чанки. Проверка файла: `ffprobe` — число дорожек,
-  `silencedetect` — звук в каждой. Нужны: VB-Cable, `ELEVENLABS_API_KEY`, obs-websocket + пароль.
+- **0.5. GPU-голос (опционально).** Kokoro-ru + ROCm PyTorch на Windows, `voice/kokoro_backend.py`,
+  ассеты `%LOCALAPPDATA%\pilot\kokoro`, бенч `scripts/bench_kokoro.py`.
+
+- **1. Запись и голос (выполнено 23.11.2026).** OBS через `obsws-python`; дорожки: 1 — система, 2 — голос агента (VB-Cable),
+  3 — микрофон. Голос — локальный **Piper** (`piper-tts`, ONNX, CPU): модель `ru_RU-irina-medium`
+  в `models/piper/`, потоковые PCM-чанки, очередь реплик, кеш частых фраз по хешу текста+голоса.
+  Замер: RTF ≈ 0,09, первый чанк ≈ 60 мс, 22,05 кГц моно. Есть второй бэкенд —
+  **Kokoro-ru** на GPU (Windows, ROCm PyTorch, gfx1200): 24 кГц, качество выше, тёплый
+  RTF ≈ 0,12 на RX 9060 XT; выбирается `voice.provider: kokoro`. `/play` в мосту принимает PCM16 чанки и
+  держит поток открытым между ними. Проверка файла: `ffprobe` — число дорожек, `silencedetect` —
+  звук в каждой. Нужны: VB-Cable, obs-websocket + пароль. Платный TTS и ключи не нужны.
+  Проверено: 32,6 с записи, 3 дорожки, система 1,0 с, голос 10,7 с; `scripts/verify_stage1.py`.
 - **2. Восприятие.** `/observe` уже отдаёт дерево; добавляем CDP через Playwright (attach к Chrome/
   Electron по `--remote-debugging-port`), слияние и текстовый рендер, WebSocket `/events`.
 - **3. Исполнитель.** `agents/executor.py`, строгая JSON-схема шага, `expect` и правила эскалации
@@ -352,8 +360,8 @@ pilot/
    это перезапустит WSL и завершит текущие сессии DSH.
 3. Установить VB-Cable (системный драйвер) — этап 1.
 4. Включить obs-websocket в OBS и задать пароль (`OBS_WS_PASSWORD`).
-5. Добавить ключи в переменные окружения WSL: `DEEPSEEK_API_KEY`, `ELEVENLABS_API_KEY`,
-   `ELEVENLABS_VOICE_ID`, `OBS_WS_PASSWORD`, `PILOT_BRIDGE_TOKEN` (токен моста генерируется и
-   задаётся на этапе 0 автоматически в `.env`).
+5. Добавить ключи в переменные окружения WSL: `DEEPSEEK_API_KEY`, `OBS_WS_PASSWORD`,
+   `PILOT_BRIDGE_TOKEN` (токен моста уже сгенерирован в `.env`). Ключ для голоса не нужен: Piper
+   работает локально; модель скачивается командой `python -m piper.download_voices`.
 6. Подтвердить единый путь записей: вчера OBS писал в `D:\Video\recordly`, сейчас в `basic.ini`
    `RecFilePath=D:/Video`; папка `recordly` занята приложением Recordly.

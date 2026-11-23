@@ -17,10 +17,21 @@ dev = [
     "pytest>=8.2",
     "ruff>=0.6",
 ]
+voice = [
+    "piper-tts>=1.8,<2",
+]
+# Windows GPU voice: install ROCm PyTorch separately (see docs/SETUP.md), then this extra.
+voice-gpu = [
+    "kokoro>=0.9.4",
+    "misaki[en]>=0.9.4",
+    "ruaccent>=1.5",
+    "numpy>=2.0",
+    "huggingface-hub>=0.30",
+]
 
 [tool.setuptools]
 # win_bridge runs as plain scripts on Windows and is deployed by a copy, not installed.
-packages = ["perception"]
+packages = ["perception", "voice", "voice.third_party", "voice.third_party.kokoro_ru"]
 
 [tool.ruff]
 line-length = 100
@@ -40,3 +51,6 @@ addopts = "-q"
 # The bridge runs as plain scripts on Windows (win_bridge is the working directory),
 # so its modules import each other without the package prefix.
 "win_bridge/*.py" = ["I001"]
+# vendored third-party code keeps its upstream formatting
+"voice/third_party/**" = ["E501", "I001", "UP", "B"]
+

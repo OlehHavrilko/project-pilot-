@@ -23,6 +23,7 @@ param(
     [string]$ListenHost = "127.0.0.1",
     [int]$Port = 8765,
     [string]$AudioDevice = "",
+    [switch]$AudioDryRun,
     [string]$PythonExe = ""
 )
 
@@ -125,8 +126,11 @@ function Start-Bridge {
     $vbs = Join-Path $InstallDir "start_hidden.vbs"
     $audioArg = ""
     $audioEnv = ""
+    if ($AudioDryRun) {
+        $audioEnv = $audioEnv + 'sh.Environment("PROCESS")("PILOT_AUDIO_DRY_RUN") = "1"' + "`n"
+    }
     if ($AudioDevice) {
-        $audioArg = " --audio-device """ + $AudioDevice + """"
+        # device is passed via the environment: quotes inside the VBS line break it
         $audioEnv = 'sh.Environment("PROCESS")("PILOT_AUDIO_DEVICE") = "' + $AudioDevice + '"'
     }
     $vbsContent = @'
