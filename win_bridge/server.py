@@ -7,14 +7,16 @@ WSL side is hung.
 
 from __future__ import annotations
 
+import asyncio
 import base64
+import hmac
 import json
 import logging
 import threading
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Query, Request
+from fastapi import Depends, FastAPI, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, Response
 
 from actions import ActionError
@@ -139,6 +141,39 @@ def create_app(config: BridgeConfig) -> FastAPI:
         png = capture_png(rect)
         headers = {"X-Rect": json.dumps(rect)}
         return Response(content=png, media_type="image/png", headers=headers)
+
+    @app.websocket("/events")
+    async def events(websocket: WebSocket, token: str = Query(default="")) -> None:
+        if not token or not hmac.compare_digest(token, config.token):
+            await websocket.close(code=4401)
+            return
+        await websocket.accept()
+        previous: dict[str, dict] = {}
+        try:
+            while True:
+                windows = await asyncio.to_thread(controller.window_list)
+                current = {window["title"]: window for window in windows}
+                if not previous:
+                    await websocket.send_json({"type": "snapshot", "windows": windows})
+                    previous = current
+                    await asyncio.sleep(0.5)
+                    continue
+                for title in current.keys() - previous.keys():
+                    await websocket.send_json({"type": "window_open", "title": title})
+                for title in previous.keys() - current.keys():
+                    await websocket.send_json({"type": "window_close", "title": title})
+                for title, window in current.items():
+                    old = previous.get(title)
+                    if old is not None and old.get("focused") != window.get("focused"):
+                        await websocket.send_json(
+                            {"type": "focus", "title": title, "focused": window["focused"]}
+                        )
+                previous = current
+                await asyncio.sleep(0.5)
+        except WebSocketDisconnect:
+            pass
+        except Exception:  # noqa: BLE001 - a broken socket must not kill the bridge
+            logger.exception("events websocket failed")
 
     @app.post("/stop")
     def stop(_: None = Depends(auth)) -> dict:
