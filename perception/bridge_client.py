@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
+import time
 from pathlib import Path
 
 import httpx
@@ -81,6 +82,7 @@ class BridgeClient:
         if not token:
             raise BridgeError("bridge token is empty", code="config")
         self.base_url = base_url.rstrip("/")
+        self._token = token
         self._client = httpx.Client(
             base_url=self.base_url,
             headers={DEFAULT_TOKEN_HEADER: token},
@@ -168,6 +170,32 @@ class BridgeClient:
             "/play",
             json={"pcm_base64": pcm_base64, "sample_rate": sample_rate, "channels": channels},
         )
+
+    def watch_events(self, seconds: float = 5.0) -> list[dict]:
+        """Collect bridge events (window open/close/focus) for a short window."""
+        import json
+        from urllib.parse import quote
+
+        from websockets.sync.client import connect
+
+        ws_base = self.base_url.replace("https://", "wss://").replace("http://", "ws://")
+        url = f"{ws_base}/events?token={quote(self._token)}"
+        events: list[dict] = []
+        deadline = time.monotonic() + seconds
+        with connect(url, open_timeout=5.0, max_size=8 * 1024 * 1024) as ws:
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                try:
+                    raw = ws.recv(timeout=remaining)
+                except TimeoutError:
+                    break
+                try:
+                    events.append(json.loads(raw))
+                except ValueError:
+                    continue
+        return events
 
     def stop(self) -> dict:
         return self._request("POST", "/stop")

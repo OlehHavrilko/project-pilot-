@@ -188,10 +188,33 @@ class UiaController:
             lambda: self._act(steps, stop_event), timeout=180.0
         )
 
+    def window_list(self) -> list[dict]:
+        return self._worker.call(self._window_list, timeout=15.0)
+
     def window_rect(self, window: str | None) -> list[int] | None:
         return self._worker.call(lambda: self._window_rect(window), timeout=15.0)
 
     # -- worker-side implementation -------------------------------------
+
+    def _window_list(self) -> list[dict]:
+        desktop = Desktop(backend="uia")
+        active = _active_window_title()
+        windows = []
+        for candidate in _safe(desktop.windows, []) or []:
+            title = _safe(candidate.window_text, "") or ""
+            if not title or title == "Program Manager":
+                continue
+            if not _safe(candidate.is_visible, True):
+                continue
+            windows.append(
+                {
+                    "title": title,
+                    "class_name": _safe(candidate.class_name, "") or "",
+                    "process_id": _safe(candidate.process_id),
+                    "focused": title == active,
+                }
+            )
+        return windows
 
     def _observe(self, window: str | None, max_elements: int, depth: int) -> dict:
         desktop = Desktop(backend="uia")
