@@ -335,8 +335,11 @@ pilot/
   держит поток открытым между ними. Проверка файла: `ffprobe` — число дорожек, `silencedetect` —
   звук в каждой. Нужны: VB-Cable, obs-websocket + пароль. Платный TTS и ключи не нужны.
   Проверено: 32,6 с записи, 3 дорожки, система 1,0 с, голос 10,7 с; `scripts/verify_stage1.py`.
-- **2. Восприятие.** `/observe` уже отдаёт дерево; добавляем CDP через Playwright (attach к Chrome/
-  Electron по `--remote-debugging-port`), слияние и текстовый рендер, WebSocket `/events`.
+- **2. Восприятие (выполнено 23.11.2026).** `/observe` отдаёт дерево UIA; CDP — по WebSocket
+  с AX-деревом (без Playwright), текстовый рендер с номерами, WebSocket `/events` с
+  `window_open`/`window_close`/`focus`. CDP-порты Chromium слушают `127.0.0.1`; в NAT-режиме WSL
+  нужен dev-прокси `scripts/cdp_proxy.py`, на целевой Windows-сборке — не нужен. Проверено:
+  OBS и Проводник (UIA), Discord (CDP), события открытия/закрытия окна.
 - **3. Исполнитель.** `agents/executor.py`, строгая JSON-схема шага, `expect` и правила эскалации
   (2 подряд не сбывшихся `expect` или 3 шага без прогресса → планировщик).
 - **4. Планировщик.** `agents/planner.py`, OmniParser локально (сначала CPU; ROCm/DirectML — решить

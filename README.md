@@ -27,7 +27,12 @@ python3 -m venv .venv
 .venv/bin/python scripts/verify_voice.py    # локальный голос: синтез + WAV
 .venv/bin/python scripts/verify_stage1.py   # запись 30 с через OBS + проверка дорожек
 .venv/bin/python scripts/verify_models.py   # DeepSeek: executor + planner
+.venv/bin/python scripts/verify_stage2.py   # наблюдение OBS/Проводник (UIA) + Discord (CDP)
 ```
+
+CDP в dev-режиме: Chromium/Electron слушает только `127.0.0.1`, поэтому для WSL запускается
+`pythonw scripts/cdp_proxy.py --listen-port 9222 --target-port 9222` (Discord — 9223, сам Discord
+нужно запустить с `--remote-debugging-port=9223`). На целевой Windows-сборке прокси не нужен.
 
 GPU-голос на Windows (AMD ROCm, Kokoro-ru, ~8x realtime): см. `docs/SETUP.md`, раздел
 «GPU-голос». Коротко: `scripts/setup_kokoro_gpu.ps1`.
@@ -39,7 +44,7 @@ GPU-голос на Windows (AMD ROCm, Kokoro-ru, ~8x realtime): см. `docs/SET
 
 ```
 win_bridge/        Windows-мост (Windows-Python): UIA, действия, скриншоты, звук, стоп-клавиша
-perception/        клиент моста из WSL (позже: CDP, vision, слияние наблюдений)
+perception/        клиент моста, CDP-наблюдение, текстовый рендер, события
 voice/             локальный TTS: Piper (CPU) / Kokoro-ru (GPU), очередь, кеш
 scripts/           deploy_bridge.ps1, bridge.sh, verify_stageN.py
 tests/             unit (без внешних систем) и integration

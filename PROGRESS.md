@@ -4,114 +4,120 @@
 
 ## Текущий этап
 
-**Этап 0 «WSL и мост» — ГОТОВО, проверено запуском.**
+**Этап 2 «Восприятие» — ГОТОВО, проверено запуском.**
 
 ```
-$ .venv/bin/python scripts/verify_stage0.py
-[PASS] bridge answers /status — http://172.23.112.1:8765
+[PASS] OBS window observed — 932 chars
+[PASS] OBS elements are readable
+[PASS] Explorer window observed — 1099 chars
+[PASS] Explorer elements are readable
+[PASS] Discord CDP snapshotted — 1812 chars
+[PASS] Discord elements are readable
+[PASS] window_open event received — «Без имени — Блокнот»
+[PASS] window_close event received
+STAGE 2: PASS
+```
+
+Артефакты: `runs/stage2-2026-11-23_08-23-54/` (`obs.txt`, `explorer.txt`, `discord.txt`,
+`verify.json`).
+
+**Этап 1 «Запись и голос» — ГОТОВО.**
+
+```
+[PASS] OBS websocket connected — OBS 33.0.3
+[PASS] recording tracks 1+2+3 enabled — RecTracks=7
+[PASS] system audio on track 1 / agent voice on track 2 / microphone on track 3
+[PASS] bridge plays into VB-Cable — CABLE Input
+[PASS] recording started / stopped
+[PASS] audio streams >= 2 — 3 audio tracks
+[PASS] system track has sound — [1.0, 10.7, 0.0]
+[PASS] voice track has sound — 10.7 s
+STAGE 1: PASS
+```
+
+Файл: `D:\Video\2026-11-23 10-13-30.mkv` (32,6 с, 3 дорожки).
+
+**Этап 0 «WSL и мост» — ГОТОВО.**
+
+```
+[PASS] bridge answers /status
 [PASS] stop hotkey registered — ctrl+alt+q
-[PASS] Notepad window observed
-[PASS] editable element found — 86 elements, control_type=Document
+[PASS] Notepad window observed / editable element found
 [PASS] text typed into Notepad — keyboard (type_text)
 [PASS] screenshot captured — 98751 bytes, frame 2400,1279
 [PASS] stop hotkey aborts action series — executed 6 of 40
-[PASS] aborted before the end — 6
-[PASS] bridge reports stopped state
 [PASS] actions work again after resume
 STAGE 0: PASS
 ```
 
-Артефакты: `runs/stage0-2026-11-23_06-48-46/` (`notepad.png`, `observe.json`, `verify.json`).
-Юнит-тесты: 6 passed. `ruff check .` — чисто.
+Артефакты: `runs/stage0-2026-11-23_06-48-46/`.
 
 ## Что сделано
 
-- Репозиторий `~/pilot` (git инициализирован, коммитов пока нет).
+- Репозиторий `~/pilot`, GitHub `OlehHavrilko/project-pilot-` (main ведётся по этапам).
 - `TECH_SPEC.md` — уточнённое ТЗ: протокол моста, роли DeepSeek, этапы, проверки.
-- Windows-мост `win_bridge/` (FastAPI + pywinauto UIA + mss + sounddevice + RegisterHotKey):
-  - токен `X-Pilot-Token` на каждом запросе, `health`/`status`/`observe`/`act`/`screenshot`/`play`/`stop`/`resume`;
-  - UIA-снимок с номерами элементов и стабильными id в пределах снимка;
-  - действия: `click`, `set_text`, `type_text`, `key`, `focus`, `focus_window`, `wait`, серии шагов;
-  - `Ctrl+Alt+Q` обрывает серию (проверено: 6 из 40 шагов);
-  - `PILOT_BRIDGE_LOG` — перенаправление логов в файл.
-- WSL-клиент `perception/bridge_client.py`: токен из env/`.env`, поиск адреса
-  (`PILOT_BRIDGE_URL` → `127.0.0.1` → шлюз WSL), типизированные ошибки, `BridgeStopped`.
-- Деплой `scripts/deploy_bridge.ps1` + обёртка `scripts/bridge.sh`:
-  venv на Windows, pip install, запуск через `wscript.exe` (скрыто, вне процесса WSL),
-  PID-файл, health-wait, `stop`/`status`/`logs`.
-- Верификация `scripts/verify_stage0.py` (Notepad, текст, скриншот, стоп-клавиша).
-- Локальный голос: `voice/` (Piper + очередь + кеш), `scripts/verify_voice.py`; мост держит
-  аудиопоток открытым и умеет dry-run (`--audio-dry-run`, `PILOT_AUDIO_DRY_RUN`).
-- Запись: `recording/obs_client.py` (obs-websocket 5.7.6), `scripts/verify_stage1.py`.
-- DeepSeek: `models/adapter.py` (роли executor/planner/compiler, thinking, JSON-схема
-  с одним повтором, бюджет, логирование), `scripts/verify_models.py`.
-- В WSL установлены `python3-venv`, `python3-pip`, `ffmpeg`/`ffprobe` (6.1.1).
+- Windows-мост `win_bridge/`:
+  - FastAPI + токен `X-Pilot-Token`; `health`/`status`/`observe`/`act`/`screenshot`/`play`/`stop`/`resume`;
+  - UIA-снимок с номерами, действия `click`/`set_text`/`type_text`/`key`/`focus`/`focus_window`/`wait`, серии;
+  - `Ctrl+Alt+Q` обрывает серию; `PILOT_BRIDGE_LOG`; запуск через `wscript.exe` (иначе WSL ждёт процесс);
+  - WebSocket `/events`: `window_open` / `window_close` / `focus` (поллинг списка окон, 0,5 с);
+  - аудиопоток в `CABLE Input` без разрыва между PCM-чанками, `--audio-dry-run`.
+- `perception/`:
+  - `bridge_client.py` — клиент моста, поиск адреса, `watch_events`, типизированные ошибки;
+  - `render.py` — компактный текст с `[id]` для UIA и CDP AX-дерева;
+  - `cdp.py` — снимок accessibility tree по CDP (без Playwright), список целей.
+- `recording/obs_client.py` — obs-websocket: старт/стоп, `RecTracks=7`, маршрутизация источников.
+- `voice/` — Piper (CPU) и Kokoro-ru (GPU, ROCm Windows), очередь, кеш, поток в мост.
+- `models/adapter.py` — DeepSeek: роли, thinking, JSON-схема с одним повтором, бюджет.
+- Скрипты проверок: `verify_stage0.py`, `verify_stage1.py`, `verify_stage2.py`, `verify_voice.py`,
+  `verify_models.py`; dev-прокси `scripts/cdp_proxy.py` для CDP из WSL.
+- В WSL установлены `python3-venv`, `python3-pip`, `ffmpeg`/`ffprobe`; Python-зависимости в `.venv`.
 
 ## Окружение (проверено)
 
 | Что | Факт |
 |-----|------|
-| WSL | Ubuntu 24.04, Python 3.12.3, WSL2 |
+| WSL | Ubuntu 24.04, Python 3.12.3 |
 | Windows | Windows 11 Pro, пользователь `hvrlkoPC`, PowerShell 5.1 |
-| Windows-Python | 3.12.10 (`%LOCALAPPDATA%\Programs\Python\Python312`) |
-| Мост | `%LOCALAPPDATA%\pilot-bridge` (app, venv, logs, token.txt, bridge.pid) |
-| Адрес моста | `172.23.112.1:8765` (IP vEthernet WSL, NAT-режим) |
-| OBS | 33.0.0, конфиги и бэкап на месте, obs-websocket выключен |
-| VB-Cable | не установлен |
-| Ключи | `OBS_WS_PASSWORD` и `DEEPSEEK_API_KEY` заданы (в `.env`, не в git) |
+| Windows-Python | 3.12.10; GPU-venv `%LOCALAPPDATA%\pilot-voice` |
+| GPU | AMD Radeon RX 9060 XT 16 ГБ (gfx1200), ROCm PyTorch 2.15.0+rocm10.2.0 |
+| Мост | `%LOCALAPPDATA%\pilot-bridge`, `172.23.112.1:8765`, `CABLE Input` |
+| OBS | 33.0.3, obs-websocket 5.7.6 включён, `RecTracks=7` |
+| VB-Cable | установлен |
+| Ключи | `OBS_WS_PASSWORD`, `DEEPSEEK_API_KEY` в `.env` (не в git) |
+| CDP | Discord на 9223, Helium на 9222, dev-прокси в WSL |
+
+## CDP в dev-режиме
+
+- Chromium/Electron слушает `--remote-debugging-port` только на `127.0.0.1`; WSL в NAT его не видит.
+  Для разработки запускается `pythonw scripts/cdp_proxy.py --listen-port 9222 --target-port 9222`
+  (для Discord — 9223), который пересылает с адреса vEthernet.
+- Discord нужно запускать с `--remote-debugging-port=9223`; сейчас так и запущен.
+- На целевой Windows-сборке мозг и мост на одной машине, прокси не нужен.
 
 ## Известные проблемы и решения
 
-- **Голос: ElevenLabs заменён на локальный Piper** (23.11.2026). Бесплатно, офлайн, без ключей и
-  лимитов. Реализовано: `voice/piper_backend.py`, `voice/speaker.py` (очередь + кеш), мост держит
-  аудиопоток открытым; проверено `scripts/verify_voice.py`: 6,6 с речи синтезируются за 0,59 с
-  (RTF 0,09), 22,05 кГц моно, 3 чанка. Поток в мост проверен в dry-run (мост без VB-Cable):
-  все байты дошли. Осталось проиграть в реальный VB-Cable после его установки.
-- **GPU-голос проверен на RX 9060 XT (16 ГБ, gfx1200).** ROCm PyTorch 2.15.0+rocm10.2.0
-  на Windows Python 3.12: `torch.cuda.is_available() = True`. Kokoro-ru (82M, голос sveta)
-  на GPU: тёплый синтез 8,5 с речи за ~1,0 с, **RTF ≈ 0,12**, 24 кГц; первый запуск ~32 с
-  (компиляция MIOpen, закрывается warmup). Обход бага MIOpen: нативная замена
-  `instance_norm` (RDNA4). Ассеты и venv — в `%LOCALAPPDATA%\pilot\kokoro` и
-  `%LOCALAPPDATA%\pilot-voice`.
+- `/mnt/c`, `/mnt/d` не монтируются автоматически (`automount=false`); сейчас смонтированы вручную.
+- Mirrored networking выключен; работаем через `172.23.112.1` и dev-прокси.
+- **Пароль obs-websocket засветился** в скриншоте, который попал в git. Файл удалён, история
+  ветки переписана, но пароль нужно сменить в OBS и обновить `.env`.
+- **Микрофонная дорожка** в тесте этапа 1 пустая (0 с) — микрофон тихий/выключен; для критерия
+  не требуется, вернёмся на этапе 8.
+- **OBS может быть свёрнут в трей** без окна; для UIA-наблюдения окно нужно открыть (в тесте
+  OBS перезапущен).
+- **Фокус окон**: если foreground занят игрой, `SetForegroundWindow` может не сработать;
+  `verify_stage0.py` в этом случае использует `WM_SETTEXT`.
+- Записи OBS идут в `D:\Video`; тесты — туда же, по ТЗ позже `pilot-tests`.
+- Kokoro на RDNA4: MIOpen падает на `instance_norm`, бэкенд подменяет его нативным расчётом;
+  первый синтез ~30 с (warmup).
 
-- **Целевая платформа — Windows, WSL только для разработки** (23.11.2026, `PROJECT_PILOT.md` п. 2.8,
-  `AGENTS.md` п. 2.0, добавлен этап 11). Код мозга должен оставаться кроссплатформенным.
-  `perception/bridge_client.py: windows_host()` вызывает `ip route` (WSL-only). На Windows это
-  безопасно падает в `127.0.0.1`, но при выносе в профили конфига его стоит перенести в dev-профиль.
+## Требуется от пользователя
 
-- `/mnt/c` и `/mnt/d` не монтируются автоматически (`/etc/wsl.conf`: `automount=false`).
-  Сейчас смонтированы вручную; после перезапуска WSL их нужно монтировать снова либо включить
-  automount/fstab. Вопрос пользователю — в `TECH_SPEC.md`, п. 1.2.
-- Mirrored networking выключен. Работает fallback: мост слушает `172.23.112.1`, WSL ходит на него.
-  Переход на mirrored требует `wsl --shutdown` (убьёт текущую DSH-сессию), делать между сессиями.
-- **Фокус окон.** Если foreground занят полноэкранной игрой (в тесте — World of Warcraft),
-  `SetForegroundWindow` может не сработать. `verify_stage0.py` в этом случае пишет текст через
-  `WM_SETTEXT` и честно указывает способ. Для этапа 2 нужно добавить надёжный подъём окна
-  (AttachThreadInput уже используется, но не всегда достаточно).
-- **Запуск моста.** Если запускать python напрямую из PowerShell, вызванного из WSL, `wsl.exe`
-  не возвращает управление, пока жив потомок. Поэтому используется `wscript.exe` + скрытый VBS.
-- **Путь записей OBS расходится.** Вчерашние логи (`logs/2026-11-22 23-27-15.txt`) пишут
-  `D:/Video/recordly/2026-11-22 23-27-15.mkv`, сейчас в `basic.ini` стоит `RecFilePath=D:/Video`,
-  а сами тестовые `.mkv` лежат в `D:\Video`. Папка `D:\Video\recordly` занята приложением Recordly.
-  На этапе 1 привести путь к одному значению (настройки/obs-websocket) и писать тесты в `pilot-tests`.
-- Тестовые Блокноты, открытые проверкой, закрываются скриптом; чужие файлы не трогались.
-
-## Модели: проверено
-
-- `GET /models`: `deepseek-flash`, `deepseek-v4-pro`.
-- Исполнитель (thinking off): 0,61 с, JSON `{"answer": 391}`.
-- Планировщик (thinking on, `reasoning_effort: high`): 1,03 с, reasoning 297 символов,
-  JSON `{"steps": [...]}`.
-
-## Требуется от пользователя (этап 1+)
-
-1. Решить, включать ли постоянное монтирование `/mnt/c` и `/mnt/d`.
-2. В удобный момент включить mirrored networking и перезапустить WSL.
-3. Сменить пароль obs-websocket в OBS (старый засветился в скриншоте) и обновить `.env`.
-4. Добавить `DEEPSEEK_API_KEY` в окружение WSL. Ключ для голоса не нужен.
-5. Подтвердить единый путь записей OBS (`D:\Video` сейчас; `recordly\pilot-tests` — по ТЗ).
+1. Сменить пароль obs-websocket в OBS (старый засветился) и обновить `.env`.
+2. Решить про постоянное монтирование дисков и mirrored networking (по желанию).
+3. Подтвердить единый путь записей OBS (`D:\Video` сейчас; `recordly\pilot-tests` — по ТЗ).
 
 ## Следующий шаг
 
-Этап 2 «Восприятие»: единое наблюдение UIA + CDP, текстовый формат с номерами элементов,
-подписка на события Windows. Для OBS, Discord и Проводника — понятный список элементов.
+Этап 3 «Исполнитель»: цикл наблюдение → решение → действие, действия через мост, `expect`,
+эскалация к планировщику после повторных неудач, лимиты шагов/времени.
