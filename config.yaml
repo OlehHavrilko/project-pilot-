@@ -49,6 +49,22 @@ recording:
     microphone: 3
 
 voice:
-  provider: elevenlabs
-  model: eleven_flash_v2_5
+  # Local, free, offline TTS. Voices: models/piper/<voice>.onnx
+  provider: piper
+  piper:
+    model: models/piper/ru_RU-irina-medium.onnx
+    length_scale: 1.0
+    volume: 1.0
+  # GPU option for Windows: Russian Kokoro-ru on ROCm PyTorch (see docs/SETUP.md).
+  kokoro:
+    # Windows GPU: '%LOCALAPPDATA%\\pilot\\kokoro' (env vars are expanded)
+    asset_dir: models/kokoro
+    repo: zaakirio/kokoro-ru
+    model_file: kokoro-ru-v2-base.pth
+    voice: sveta
+    device: auto
+    speed: 1.0
+    warmup: true
   output_device: 'CABLE Input'
+  cache_dir: runs/voice-cache
+  max_pending: 2

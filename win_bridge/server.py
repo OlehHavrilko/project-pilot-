@@ -40,7 +40,7 @@ def _error(status_code: int, message: str, code: str) -> JSONResponse:
 def create_app(config: BridgeConfig) -> FastAPI:
     controller = UiaController()
     stop_event = threading.Event()
-    audio = AudioPlayer(config.audio_device)
+    audio = AudioPlayer(config.audio_device, dry_run=config.audio_dry_run)
     started_at = time.monotonic()
     hotkey = HotkeyListener(config.hotkey, on_trigger=stop_event.set)
     auth = make_token_checker(config.token)
@@ -50,6 +50,7 @@ def create_app(config: BridgeConfig) -> FastAPI:
         ok = hotkey.start()
         logger.info("bridge started, hotkey registered: %s", ok)
         yield
+        audio.close()
         hotkey.stop()
 
     app = FastAPI(title="Pilot bridge", version=API_VERSION, lifespan=lifespan)
@@ -73,6 +74,8 @@ def create_app(config: BridgeConfig) -> FastAPI:
             "uptime_s": round(time.monotonic() - started_at, 1),
             "audio_device": config.audio_device,
             "audio_available": audio.available,
+            "audio_dry_run": config.audio_dry_run,
+            "audio_bytes": audio.bytes_played,
         }
 
     @app.post("/observe")

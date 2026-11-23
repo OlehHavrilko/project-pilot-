@@ -17,3 +17,7 @@ win_bridge/.venv/
 win_bridge/__pycache__/
 deploy_out/
 *.egg-info/
+models/
+*.jpg
+*.jpeg
+*:Zone.Identifier

@@ -14,6 +14,7 @@ class BridgeConfig:
     token: str
     audio_device: str | None
     hotkey: str
+    audio_dry_run: bool = False
 
 
 def parse_args(argv: list[str] | None = None) -> BridgeConfig:
@@ -42,6 +43,12 @@ def parse_args(argv: list[str] | None = None) -> BridgeConfig:
         "--hotkey",
         default=os.environ.get("PILOT_STOP_HOTKEY", "ctrl+alt+q"),
     )
+    parser.add_argument(
+        "--audio-dry-run",
+        action="store_true",
+        default=os.environ.get("PILOT_AUDIO_DRY_RUN", "").lower() in ("1", "true", "yes"),
+        help="Accept /play chunks without opening an audio device.",
+    )
     args = parser.parse_args(argv)
     if not args.token:
         parser.error(
@@ -53,4 +60,5 @@ def parse_args(argv: list[str] | None = None) -> BridgeConfig:
         token=args.token,
         audio_device=args.audio_device,
         hotkey=args.hotkey,
+        audio_dry_run=args.audio_dry_run,
     )
