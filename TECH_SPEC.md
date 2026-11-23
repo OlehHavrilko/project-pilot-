@@ -27,7 +27,7 @@
 | Ключи API | `DEEPSEEK_API_KEY`, `ELEVENLABS_API_KEY` и др. в WSL не заданы | ❌ этапы 1, 3+ |
 | Сеть | mirrored networking **выключен** (`.wslconfig` без `networkingMode`) | ⚠️ работает fallback |
 | Связь WSL→Windows | из WSL доступен `172.23.112.1` (vEthernet WSL); проверено HTTP 200 | ✅ |
-| Записи OBS | тестовые `.mkv` лежат в `D:\Video`, а не в `D:\Video\recordly` (там `Recordly.exe`) | ⚠️ уточнить на этапе 1 |
+| Записи OBS | логи вчерашней записи: `D:\Video\recordly`; сейчас `basic.ini` → `RecFilePath=D:/Video`; mkv лежат в `D:\Video` | ⚠️ свести к одному пути на этапе 1 |
 
 **Вывод:** этап 0 полностью проходим уже сейчас по «запасному» сетевому варианту. Этапы 1+ требуют
 действий пользователя (VB-Cable, ключи, obs-websocket).
@@ -355,4 +355,5 @@ pilot/
 5. Добавить ключи в переменные окружения WSL: `DEEPSEEK_API_KEY`, `ELEVENLABS_API_KEY`,
    `ELEVENLABS_VOICE_ID`, `OBS_WS_PASSWORD`, `PILOT_BRIDGE_TOKEN` (токен моста генерируется и
    задаётся на этапе 0 автоматически в `.env`).
-6. Уточнить, куда OBS реально пишет записи: `D:\Video` или `D:\Video\recordly`.
+6. Подтвердить единый путь записей: вчера OBS писал в `D:\Video\recordly`, сейчас в `basic.ini`
+   `RecFilePath=D:/Video`; папка `recordly` занята приложением Recordly.
